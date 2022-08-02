@@ -12,7 +12,7 @@ const (
 )
 
 type FNLfloat float32
-type NoiseType int64
+type NoiseType int32
 
 const (
 	NoiseTypeOpenSimplex2 NoiseType = iota
@@ -23,7 +23,7 @@ const (
 	NoiseTypeValue
 )
 
-type RotationType3D int64
+type RotationType3D int32
 
 const (
 	RotationType3DNone RotationType3D = iota
@@ -31,7 +31,7 @@ const (
 	RotationType3DImproveXZPlanes
 )
 
-type FractalType int64
+type FractalType int32
 
 const (
 	FractalTypeNone FractalType = iota
@@ -42,7 +42,7 @@ const (
 	FractalTypeDomainWarpIndependent
 )
 
-type CellularDistanceFunction int64
+type CellularDistanceFunction int32
 
 const (
 	CellularDistanceFunctionEuclidean CellularDistanceFunction = iota
@@ -51,7 +51,7 @@ const (
 	CellularDistanceFunctionHybrid
 )
 
-type CellularReturnType int64
+type CellularReturnType int32
 
 const (
 	CellularReturnTypeCellValue CellularReturnType = iota
@@ -63,7 +63,7 @@ const (
 	CellularReturnTypeDistance2Div
 )
 
-type DomainWarpType int64
+type DomainWarpType int32
 
 const (
 	DomainWarpTypeOpenSimplex2 DomainWarpType = iota
@@ -71,7 +71,7 @@ const (
 	DomainWarpTypeBasicGrid
 )
 
-type TransformType3D int64
+type TransformType3D int32
 
 const (
 	TransformType3DNone TransformType3D = iota
@@ -81,13 +81,13 @@ const (
 )
 
 type FastNoiseLite struct {
-	Seed                     int
+	Seed                     int32
 	Frequency                float64
 	mNoiseType               NoiseType
 	mRotationType3D          RotationType3D
 	TransformType3D          TransformType3D
 	FractalType              FractalType
-	mOctaves                 int
+	mOctaves                 int32
 	Lacunarity               float64
 	mGain                    float64
 	WeightedStrength         float64
@@ -265,7 +265,7 @@ func (n *FastNoiseLite) SetRotationType3D(rotationType3D RotationType3D) {
 	n.UpdateWarpTransformType3D()
 }
 
-func (n *FastNoiseLite) SetFractaclOctaves(octaves int) {
+func (n *FastNoiseLite) SetFractalOctaves(octaves int32) {
 	n.mOctaves = octaves
 	n.CalculateFractalBounding()
 }
@@ -308,6 +308,28 @@ func (n *FastNoiseLite) GetNoise3D(x FNLfloat, y FNLfloat, z FNLfloat) float64 {
 	}
 }
 
+func (n *FastNoiseLite) DomainWarp2D(x *FNLfloat, y *FNLfloat) {
+	switch n.FractalType {
+	default:
+		n.DomainWarpSingle2D(x, y)
+	case FractalTypeDomainWarpProgressive:
+		n.DomainWarpFractalProgressive2D(x, y)
+	case FractalTypeDomainWarpIndependent:
+		n.DomainWarpFractalIndependent2D(x, y)
+	}
+}
+
+func (n *FastNoiseLite) DomainWarp3D(x *FNLfloat, y *FNLfloat, z *FNLfloat) {
+	switch n.FractalType {
+	default:
+		n.DomainWarpSingle3D(x, y, z)
+	case FractalTypeDomainWarpProgressive:
+		n.DomainWarpFractalProgressive3D(x, y, z)
+	case FractalTypeDomainWarpIndependent:
+		n.DomainWarpFractalIndependent3D(x, y, z)
+	}
+}
+
 func InterpHermite(t float64) float64 {
 	return t * t * (3 - 2*t)
 }
@@ -334,35 +356,35 @@ func PingPong(t float64) float64 {
 	}
 }
 
-func Hash2D(seed int, xPrimed int, yPrimed int) int {
+func Hash2D(seed int32, xPrimed int32, yPrimed int32) int32 {
 	hash := seed ^ xPrimed ^ yPrimed
 	hash *= 0x27d4eb2d
 	return hash
 }
 
-func Hash3D(seed int, xPrimed int, yPrimed int, zPrimed int) int {
+func Hash3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32) int32 {
 	hash := seed ^ xPrimed ^ yPrimed ^ zPrimed
 	hash *= 0x27d4eb2d
 	return hash
 }
 
-func ValCoord2D(seed int, xPrimed int, yPrimed int) float64 {
-	hash := Hash2D(seed, xPrimed, yPrimed)
+func ValCoord2D(seed int32, xPrimed int32, yPrimed int32) float64 {
+	hash := int32(Hash2D(seed, xPrimed, yPrimed))
 
 	hash *= hash
-	hash ^= hash << 19
+	hash = hash ^ int32(hash<<19)
 	return float64(hash) * (1.0 / 2147483648.0)
 }
 
-func ValCoord3D(seed int, xPrimed int, yPrimed int, zPrimed int) float64 {
-	hash := Hash3D(seed, xPrimed, yPrimed, zPrimed)
+func ValCoord3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32) float64 {
+	hash := int32(Hash3D(seed, xPrimed, yPrimed, zPrimed))
 
 	hash *= hash
-	hash ^= hash << 19
+	hash = hash ^ int32(hash<<19)
 	return float64(hash) * (1.0 / 2147483648.0)
 }
 
-func GradCoord2D(seed int, xPrimed int, yPrimed int, xd float64, yd float64) float64 {
+func GradCoord2D(seed int32, xPrimed int32, yPrimed int32, xd float64, yd float64) float64 {
 	hash := Hash2D(seed, xPrimed, yPrimed)
 	hash ^= hash >> 15
 	hash &= 127 << 1
@@ -373,7 +395,7 @@ func GradCoord2D(seed int, xPrimed int, yPrimed int, xd float64, yd float64) flo
 	return xd*xg + yd*yg
 }
 
-func GradCoord3D(seed int, xPrimed int, yPrimed int, zPrimed int, xd float64, yd float64, zd float64) float64 {
+func GradCoord3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32, xd float64, yd float64, zd float64) float64 {
 	hash := Hash3D(seed, xPrimed, yPrimed, zPrimed)
 	hash ^= hash >> 15
 	hash &= 63 << 2
@@ -383,6 +405,56 @@ func GradCoord3D(seed int, xPrimed int, yPrimed int, zPrimed int, xd float64, yd
 	zg := Gradients3D[hash|2]
 
 	return xd*xg + yd*yg + zd*zg
+}
+
+func GradCoordOut2D(seed int32, xPrimed int32, yPrimed int32, xo *float64, yo *float64) {
+	hash := Hash2D(seed, xPrimed, yPrimed) & (255 << 1)
+
+	*xo = RandVecs2D[hash]
+	*yo = RandVecs2D[hash|1]
+}
+
+func GradCoordOut3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32, xo *float64, yo *float64, zo *float64) {
+	hash := Hash3D(seed, xPrimed, yPrimed, zPrimed) & (255 << 2)
+
+	*xo = RandVecs3D[hash]
+	*yo = RandVecs3D[hash|1]
+	*zo = RandVecs3D[hash|2]
+}
+
+func GradCoordDual2D(seed int32, xPrimed int32, yPrimed int32, xd float64, yd float64, xo *float64, yo *float64) {
+	hash := Hash2D(seed, xPrimed, yPrimed)
+	index1 := hash & (127 << 1)
+	index2 := (hash >> 7) & (255 << 1)
+
+	xg := Gradients2D[index1]
+	yg := Gradients2D[index1|1]
+	value := xd*xg + yd*yg
+
+	xgo := RandVecs2D[index2]
+	ygo := RandVecs2D[index2|1]
+
+	*xo = value * xgo
+	*yo = value * ygo
+}
+
+func GradCoordDual3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32, xd float64, yd float64, zd float64, xo *float64, yo *float64, zo *float64) {
+	hash := Hash3D(seed, xPrimed, yPrimed, zPrimed)
+	index1 := hash & (63 << 2)
+	index2 := (hash >> 6) & (255 << 2)
+
+	xg := Gradients3D[index1]
+	yg := Gradients3D[index1|1]
+	zg := Gradients3D[index1|2]
+	value := xd*xg + yd*yg + zd*zg
+
+	xgo := RandVecs3D[index2]
+	ygo := RandVecs3D[index2|1]
+	zgo := RandVecs3D[index2|2]
+
+	*xo = value * xgo
+	*yo = value * ygo
+	*zo = value * zgo
 }
 
 func (n *FastNoiseLite) TransformNoiseCoordinate2D(x *FNLfloat, y *FNLfloat) {
@@ -431,7 +503,7 @@ func (n *FastNoiseLite) CalculateFractalBounding() {
 	gain := math.Abs(n.mGain)
 	amp := gain
 	ampFractal := 1.0
-	for i := 1; i < n.mOctaves; i++ {
+	for i := int32(1); i < n.mOctaves; i++ {
 		ampFractal += amp
 		amp *= gain
 	}
@@ -470,7 +542,7 @@ func (n *FastNoiseLite) UpdateWarpTransformType3D() {
 	}
 }
 
-func (n *FastNoiseLite) GenNoiseSingle2D(seed int, x FNLfloat, y FNLfloat) float64 {
+func (n *FastNoiseLite) GenNoiseSingle2D(seed int32, x FNLfloat, y FNLfloat) float64 {
 	switch n.mNoiseType {
 	case NoiseTypeOpenSimplex2:
 		return n.SingleSimplex2D(seed, x, y)
@@ -489,7 +561,7 @@ func (n *FastNoiseLite) GenNoiseSingle2D(seed int, x FNLfloat, y FNLfloat) float
 	}
 }
 
-func (n *FastNoiseLite) GenNoiseSingle3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+func (n *FastNoiseLite) GenNoiseSingle3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
 	switch n.mNoiseType {
 	case NoiseTypeOpenSimplex2:
 		return n.SingleSimplex3D(seed, x, y, z)
@@ -513,7 +585,7 @@ func (n *FastNoiseLite) GenFractalFBm2D(x FNLfloat, y FNLfloat) float64 {
 	sum := 0.0
 	amp := n.FractalBounding
 
-	for i := 0; i < n.mOctaves; i++ {
+	for i := int32(0); i < n.mOctaves; i++ {
 		noise := n.GenNoiseSingle2D(seed, x, y)
 		seed += 1
 		sum += noise * amp
@@ -532,7 +604,7 @@ func (n *FastNoiseLite) GenFractalFBm3D(x FNLfloat, y FNLfloat, z FNLfloat) floa
 	sum := 0.0
 	amp := n.FractalBounding
 
-	for i := 0; i < n.mOctaves; i++ {
+	for i := int32(0); i < n.mOctaves; i++ {
 		noise := n.GenNoiseSingle3D(seed, x, y, z)
 		seed += 1
 		sum += noise * amp
@@ -552,7 +624,7 @@ func (n *FastNoiseLite) GenFractalRidged2D(x FNLfloat, y FNLfloat) float64 {
 	sum := 0.0
 	amp := n.FractalBounding
 
-	for i := 0; i < n.mOctaves; i++ {
+	for i := int32(0); i < n.mOctaves; i++ {
 		noise := math.Abs(n.GenNoiseSingle2D(seed, x, y))
 		seed += 1
 		sum += (noise*-2.0 + 1.0) * amp
@@ -571,7 +643,7 @@ func (n *FastNoiseLite) GenFractalRidged3D(x FNLfloat, y FNLfloat, z FNLfloat) f
 	sum := 0.0
 	amp := n.FractalBounding
 
-	for i := 0; i < n.mOctaves; i++ {
+	for i := int32(0); i < n.mOctaves; i++ {
 		noise := math.Abs(n.GenNoiseSingle3D(seed, x, y, z))
 		seed += 1
 		sum += (noise*-2.0 + 1.0) * amp
@@ -591,7 +663,7 @@ func (n *FastNoiseLite) GenFractalPingPong2D(x FNLfloat, y FNLfloat) float64 {
 	sum := 0.0
 	amp := n.FractalBounding
 
-	for i := 0; i < n.mOctaves; i++ {
+	for i := int32(0); i < n.mOctaves; i++ {
 		noise := PingPong((n.GenNoiseSingle2D(seed, x, y) + 1) * n.PingPongStrength)
 		seed += 1
 		sum += (noise - 0.5) * 2 * amp
@@ -610,7 +682,7 @@ func (n *FastNoiseLite) GenFractalPingPong3D(x FNLfloat, y FNLfloat, z FNLfloat)
 	sum := 0.0
 	amp := n.FractalBounding
 
-	for i := 0; i < n.mOctaves; i++ {
+	for i := int32(0); i < n.mOctaves; i++ {
 		noise := PingPong((n.GenNoiseSingle3D(seed, x, y, z) + 1) * n.PingPongStrength)
 		seed += 1
 		sum += (noise - 0.5) * 2 * amp
@@ -625,12 +697,12 @@ func (n *FastNoiseLite) GenFractalPingPong3D(x FNLfloat, y FNLfloat, z FNLfloat)
 	return sum
 }
 
-func (n *FastNoiseLite) SingleSimplex2D(seed int, x FNLfloat, y FNLfloat) float64 {
+func (n *FastNoiseLite) SingleSimplex2D(seed int32, x FNLfloat, y FNLfloat) float64 {
 	const SQRT3 = 1.7320508075688772935274463415059
 	const G2 = (3 - SQRT3) / 6
 
-	i := int(math.Floor(float64(x)))
-	j := int(math.Floor(float64(y)))
+	i := int32(math.Floor(float64(x)))
+	j := int32(math.Floor(float64(y)))
 	xi := float64(x) - float64(i)
 	yi := float64(y) - float64(j)
 
@@ -682,17 +754,17 @@ func (n *FastNoiseLite) SingleSimplex2D(seed int, x FNLfloat, y FNLfloat) float6
 	return (n0 + n1 + n2) * 99.83685446303647
 }
 
-func (n *FastNoiseLite) SingleSimplex3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
-	i := int(math.Round(float64(x)))
-	j := int(math.Round(float64(y)))
-	k := int(math.Round(float64(z)))
+func (n *FastNoiseLite) SingleSimplex3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+	i := int32(math.Round(float64(x)))
+	j := int32(math.Round(float64(y)))
+	k := int32(math.Round(float64(z)))
 	x0 := float64(x) - float64(i)
 	y0 := float64(y) - float64(j)
 	z0 := float64(z) - float64(k)
 
-	xNSign := int(-1.0-x0) | 1
-	yNSign := int(-1.0-y0) | 1
-	zNSign := int(-1.0-z0) | 1
+	xNSign := int32(-1.0-x0) | 1
+	yNSign := int32(-1.0-y0) | 1
+	zNSign := int32(-1.0-z0) | 1
 
 	ax0 := float64(xNSign) * -x0
 	ay0 := float64(yNSign) * -y0
@@ -758,21 +830,21 @@ func (n *FastNoiseLite) SingleSimplex3D(seed int, x FNLfloat, y FNLfloat, z FNLf
 	return value * 32.69428253173828125
 }
 
-func (n *FastNoiseLite) SingleOpenSimplex2S2D(seed int, x FNLfloat, y FNLfloat) float64 {
+func (n *FastNoiseLite) SingleOpenSimplex2S2D(seed int32, x FNLfloat, y FNLfloat) float64 {
 	// 2D OpenSimplex2S case is a modified 2D simplex noise.
 
 	const SQRT3 = FNLfloat(1.7320508075688772935274463415059)
 	const G2 = (3.0 - SQRT3) / 6.0
 
-	i := int(math.Floor(float64(x)))
-	j := int(math.Floor(float64(y)))
+	i := int32(math.Floor(float64(x)))
+	j := int32(math.Floor(float64(y)))
 	xi := float64(x) - float64(i)
 	yi := float64(y) - float64(j)
 
 	i *= PrimeX
 	j *= PrimeY
-	i1 := int(i + PrimeX)
-	j1 := int(j + PrimeY)
+	i1 := int32(i + PrimeX)
+	j1 := int32(j + PrimeY)
 
 	t := (xi + yi) * float64(G2)
 	x0 := xi - t
@@ -810,7 +882,7 @@ func (n *FastNoiseLite) SingleOpenSimplex2S2D(seed int, x FNLfloat, y FNLfloat) 
 			y3 := y0 + float64(3.0*G2-2.0)
 			a3 := (2.0 / 3.0) - x3*x3 - y3*y3
 			if a3 > 0 {
-				value += (a3 * a3) * (a3 * a3) * GradCoord2D(seed, i+PrimeX, j+(PrimeY<<1), x3, y3)
+				value += (a3 * a3) * (a3 * a3) * GradCoord2D(seed, i+PrimeX, int32(int64(j)+(int64(PrimeY)<<1)), x3, y3)
 			}
 		} else {
 			x3 := x0 + float64(G2-1.0)
@@ -857,10 +929,10 @@ func (n *FastNoiseLite) SingleOpenSimplex2S2D(seed int, x FNLfloat, y FNLfloat) 
 	return value * 18.24196194486065
 }
 
-func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
-	i := int(math.Floor(float64(x)))
-	j := int(math.Floor(float64(y)))
-	k := int(math.Floor(float64(z)))
+func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+	i := int32(math.Floor(float64(x)))
+	j := int32(math.Floor(float64(y)))
+	k := int32(math.Floor(float64(z)))
 	xi := float64(x) - float64(i)
 	yi := float64(y) - float64(j)
 	zi := float64(z) - float64(k)
@@ -870,9 +942,9 @@ func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, 
 	k *= PrimeZ
 	seed2 := seed + 1293373
 
-	xNMask := int(-0.5 - xi)
-	yNMask := int(-0.5 - yi)
-	zNMask := int(-0.5 - zi)
+	xNMask := int32(-0.5 - xi)
+	yNMask := int32(-0.5 - yi)
+	zNMask := int32(-0.5 - zi)
 
 	x0 := xi + float64(xNMask)
 	y0 := yi + float64(yNMask)
@@ -948,7 +1020,7 @@ func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, 
 			y8 := float64(yNMask|1) + y1
 			z8 := z1
 			value += (a8 * a8) * (a8 * a8) * GradCoord3D(seed2,
-				i+PrimeX, j+(yNMask&(PrimeY<<1)), k+PrimeZ, x8, y8, z8)
+				i+PrimeX, j+int32(int64(yNMask)&int64(PrimeY<<1)), k+PrimeZ, x8, y8, z8)
 			skip9 = true
 		}
 	}
@@ -977,7 +1049,7 @@ func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, 
 			yC := y1
 			zC := float64(zNMask|1) + z1
 			value += (aC * aC) * (aC * aC) * GradCoord3D(seed2,
-				i+PrimeX, j+PrimeY, k+(zNMask&(PrimeZ<<1)), xC, yC, zC)
+				i+PrimeX, j+PrimeY, int32(int64(k)+(int64(zNMask)&int64(PrimeZ<<1))), xC, yC, zC)
 			skipD = true
 		}
 	}
@@ -989,7 +1061,7 @@ func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, 
 			y5 := float64(yNMask|1) + y1
 			z5 := float64(zNMask|1) + z1
 			value += (a5 * a5) * (a5 * a5) * GradCoord3D(seed2,
-				i+PrimeX, j+(yNMask&(PrimeY<<1)), k+(zNMask&(PrimeZ<<1)), x5, y5, z5)
+				i+PrimeX, int32(int64(j)+(int64(yNMask)&int64(PrimeY<<1))), int32(int64(k)+(int64(zNMask)&int64(PrimeZ<<1))), x5, y5, z5)
 		}
 	}
 
@@ -1000,7 +1072,7 @@ func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, 
 			y9 := y1
 			z9 := float64(zNMask|1) + z1
 			value += (a9 * a9) * (a9 * a9) * GradCoord3D(seed2,
-				i+(xNMask&(PrimeX*2)), j+PrimeY, k+(zNMask&(PrimeZ<<1)), x9, y9, z9)
+				i+(xNMask&(PrimeX*2)), j+PrimeY, int32(int64(k)+(int64(zNMask)&int64(PrimeZ<<1))), x9, y9, z9)
 		}
 	}
 
@@ -1011,22 +1083,22 @@ func (n *FastNoiseLite) SingleOpenSimplex2S3D(seed int, x FNLfloat, y FNLfloat, 
 			yD := float64(yNMask|1) + y1
 			zD := z1
 			value += (aD * aD) * (aD * aD) * GradCoord3D(seed2,
-				i+(xNMask&(PrimeX<<1)), j+(yNMask&(PrimeY<<1)), k+PrimeZ, xD, yD, zD)
+				i+(xNMask&(PrimeX<<1)), int32(int64(j)+(int64(yNMask)&int64(PrimeY<<1))), k+PrimeZ, xD, yD, zD)
 		}
 	}
 
 	return value * 9.046026385208288
 }
 
-func (n *FastNoiseLite) SingleCellular2D(seed int, x FNLfloat, y FNLfloat) float64 {
-	xr := int(math.Round(float64(x)))
-	yr := int(math.Round(float64(y)))
+func (n *FastNoiseLite) SingleCellular2D(seed int32, x FNLfloat, y FNLfloat) float64 {
+	xr := int32(math.Round(float64(x)))
+	yr := int32(math.Round(float64(y)))
 
 	distance0 := math.MaxFloat64
 	distance1 := math.MaxFloat64
-	closestHash := 0
+	closestHash := int32(0)
 
-	cellularJitter := 0.43701595 * n.CellularJitterModifier
+	cellularJitter := 0.5 * n.CellularJitterModifier
 
 	xPrimed := (xr - 1) * PrimeX
 	yPrimedBase := (yr - 1) * PrimeY
@@ -1128,14 +1200,14 @@ func (n *FastNoiseLite) SingleCellular2D(seed int, x FNLfloat, y FNLfloat) float
 	}
 }
 
-func (n *FastNoiseLite) SingleCellular3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
-	xr := int(math.Round(float64(x)))
-	yr := int(math.Round(float64(y)))
-	zr := int(math.Round(float64(z)))
+func (n *FastNoiseLite) SingleCellular3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+	xr := int32(math.Round(float64(x)))
+	yr := int32(math.Round(float64(y)))
+	zr := int32(math.Round(float64(z)))
 
 	distance0 := math.MaxFloat64
 	distance1 := math.MaxFloat64
-	closestHash := 0
+	closestHash := int32(0)
 
 	cellularJitter := 0.39614353 * n.CellularJitterModifier
 
@@ -1258,9 +1330,9 @@ func (n *FastNoiseLite) SingleCellular3D(seed int, x FNLfloat, y FNLfloat, z FNL
 	}
 }
 
-func (n *FastNoiseLite) SinglePerlin2D(seed int, x FNLfloat, y FNLfloat) float64 {
-	x0 := int(math.Floor(float64(x)))
-	y0 := int(math.Floor(float64(y)))
+func (n *FastNoiseLite) SinglePerlin2D(seed int32, x FNLfloat, y FNLfloat) float64 {
+	x0 := int32(math.Floor(float64(x)))
+	y0 := int32(math.Floor(float64(y)))
 
 	xd0 := float64(x) - float64(x0)
 	yd0 := float64(y) - float64(y0)
@@ -1281,10 +1353,10 @@ func (n *FastNoiseLite) SinglePerlin2D(seed int, x FNLfloat, y FNLfloat) float64
 	return Lerp(xf0, xf1, ys) * 1.4247691104677813
 }
 
-func (n *FastNoiseLite) SinglePerlin3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
-	x0 := int(math.Floor(float64(x)))
-	y0 := int(math.Floor(float64(y)))
-	z0 := int(math.Floor(float64(z)))
+func (n *FastNoiseLite) SinglePerlin3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+	x0 := int32(math.Floor(float64(x)))
+	y0 := int32(math.Floor(float64(y)))
+	z0 := int32(math.Floor(float64(z)))
 
 	xd0 := float64(x) - float64(x0)
 	yd0 := float64(y) - float64(y0)
@@ -1315,9 +1387,9 @@ func (n *FastNoiseLite) SinglePerlin3D(seed int, x FNLfloat, y FNLfloat, z FNLfl
 	return Lerp(yf0, yf1, zs) * 0.964921414852142333984375
 }
 
-func (n *FastNoiseLite) SingleValueCubic2D(seed int, x FNLfloat, y FNLfloat) float64 {
-	x1 := int(math.Floor(float64(x)))
-	y1 := int(math.Floor(float64(y)))
+func (n *FastNoiseLite) SingleValueCubic2D(seed int32, x FNLfloat, y FNLfloat) float64 {
+	x1 := int32(math.Floor(float64(x)))
+	y1 := int32(math.Floor(float64(y)))
 
 	xs := float64(x) - float64(x1)
 	ys := float64(y) - float64(y1)
@@ -1328,8 +1400,9 @@ func (n *FastNoiseLite) SingleValueCubic2D(seed int, x FNLfloat, y FNLfloat) flo
 	y0 := y1 - PrimeY
 	x2 := x1 + PrimeX
 	y2 := y1 + PrimeY
-	x3 := x1 + (PrimeX << 1)
-	y3 := y1 + (PrimeY << 1)
+	x3 := x1 + int32((int64(PrimeX) << 1))
+	primeY := int64(PrimeY)
+	y3 := y1 + int32((primeY << int64(1)))
 
 	return CubicLerp(
 		CubicLerp(ValCoord2D(seed, x0, y0), ValCoord2D(seed, x1, y0), ValCoord2D(seed, x2, y0), ValCoord2D(seed, x3, y0),
@@ -1340,13 +1413,13 @@ func (n *FastNoiseLite) SingleValueCubic2D(seed int, x FNLfloat, y FNLfloat) flo
 			xs),
 		CubicLerp(ValCoord2D(seed, x0, y3), ValCoord2D(seed, x1, y3), ValCoord2D(seed, x2, y3), ValCoord2D(seed, x3, y3),
 			xs),
-		ys) * (1 / (1.5 * 1.5))
+		ys) * (1.0 / (1.5 * 1.5))
 }
 
-func (n *FastNoiseLite) SingleValueCubic3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
-	x1 := int(math.Floor(float64(x)))
-	y1 := int(math.Floor(float64(y)))
-	z1 := int(math.Floor(float64(z)))
+func (n *FastNoiseLite) SingleValueCubic3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+	x1 := int32(math.Floor(float64(x)))
+	y1 := int32(math.Floor(float64(y)))
+	z1 := int32(math.Floor(float64(z)))
 
 	xs := float64(x) - float64(x1)
 	ys := float64(y) - float64(y1)
@@ -1362,9 +1435,11 @@ func (n *FastNoiseLite) SingleValueCubic3D(seed int, x FNLfloat, y FNLfloat, z F
 	x2 := x1 + PrimeX
 	y2 := y1 + PrimeY
 	z2 := z1 + PrimeZ
-	x3 := x1 + (PrimeX << 1)
-	y3 := y1 + (PrimeY << 1)
-	z3 := z1 + (PrimeZ << 1)
+	x3 := x1 + int32(int64(PrimeX)<<1)
+	primeY := int64(PrimeY)
+	y3 := y1 + int32(primeY<<1)
+	primeZ := int64(PrimeZ)
+	z3 := z1 + int32(primeZ<<1)
 
 	return CubicLerp(
 		CubicLerp(
@@ -1391,12 +1466,12 @@ func (n *FastNoiseLite) SingleValueCubic3D(seed int, x FNLfloat, y FNLfloat, z F
 			CubicLerp(ValCoord3D(seed, x0, y2, z3), ValCoord3D(seed, x1, y2, z3), ValCoord3D(seed, x2, y2, z3), ValCoord3D(seed, x3, y2, z3), xs),
 			CubicLerp(ValCoord3D(seed, x0, y3, z3), ValCoord3D(seed, x1, y3, z3), ValCoord3D(seed, x2, y3, z3), ValCoord3D(seed, x3, y3, z3), xs),
 			ys),
-		zs) * (1 / (1.5 * 1.5 * 1.5))
+		zs) * (1.0 / (1.5 * 1.5 * 1.5))
 }
 
-func (n *FastNoiseLite) SingleValue2D(seed int, x FNLfloat, y FNLfloat) float64 {
-	x0 := int(math.Floor(float64(x)))
-	y0 := int(math.Floor(float64(y)))
+func (n *FastNoiseLite) SingleValue2D(seed int32, x FNLfloat, y FNLfloat) float64 {
+	x0 := int32(math.Floor(float64(x)))
+	y0 := int32(math.Floor(float64(y)))
 
 	xs := InterpHermite(float64(x) - float64(x0))
 	ys := InterpHermite(float64(y) - float64(y0))
@@ -1412,10 +1487,10 @@ func (n *FastNoiseLite) SingleValue2D(seed int, x FNLfloat, y FNLfloat) float64 
 	return Lerp(xf0, xf1, ys)
 }
 
-func (n *FastNoiseLite) SingleValue3D(seed int, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
-	x0 := int(math.Floor(float64(x)))
-	y0 := int(math.Floor(float64(y)))
-	z0 := int(math.Floor(float64(z)))
+func (n *FastNoiseLite) SingleValue3D(seed int32, x FNLfloat, y FNLfloat, z FNLfloat) float64 {
+	x0 := int32(math.Floor(float64(x)))
+	y0 := int32(math.Floor(float64(y)))
+	z0 := int32(math.Floor(float64(z)))
 
 	xs := InterpHermite(float64(x) - float64(x0))
 	ys := InterpHermite(float64(y) - float64(y0))
@@ -1437,4 +1512,463 @@ func (n *FastNoiseLite) SingleValue3D(seed int, x FNLfloat, y FNLfloat, z FNLflo
 	yf1 := Lerp(xf01, xf11, ys)
 
 	return Lerp(yf0, yf1, zs)
+}
+
+func (n *FastNoiseLite) DomainWarpSingle2D(x *FNLfloat, y *FNLfloat) {
+	seed := n.Seed
+	amp := n.DomainWarpAmp * n.FractalBounding
+	freq := n.Frequency
+
+	xs := *x
+	ys := *y
+	n.TransformDomainWarpCoordinate2D(&xs, &ys)
+
+	n.DoSingleDomainWarp2D(seed, amp, freq, xs, ys, x, y)
+}
+
+func (n *FastNoiseLite) DomainWarpSingle3D(x *FNLfloat, y *FNLfloat, z *FNLfloat) {
+	seed := n.Seed
+	amp := n.DomainWarpAmp * n.FractalBounding
+	freq := n.Frequency
+
+	xs := *x
+	ys := *y
+	zs := *z
+	n.TransformDomainWarpCoordinate3D(&xs, &ys, &zs)
+
+	n.DoSingleDomainWarp3D(seed, amp, freq, xs, ys, zs, x, y, x)
+}
+
+func (n *FastNoiseLite) DoSingleDomainWarp2D(seed int32, amp float64, freq float64, x FNLfloat, y FNLfloat, xr *FNLfloat, yr *FNLfloat) {
+	switch n.mDomainWarpType {
+	case DomainWarpTypeOpenSimplex2:
+		SingleDomainWarpSimplexGradient2D(seed, amp*38.283687591552734375, freq, x, y, xr, yr, false)
+	case DomainWarpTypeOpenSimplex2Reduced:
+		SingleDomainWarpSimplexGradient2D(seed, amp*16.0, freq, x, y, xr, yr, true)
+	case DomainWarpTypeBasicGrid:
+		SingleDomainWarpBasicGrid2D(seed, amp, freq, x, y, xr, yr)
+	}
+}
+
+func (n *FastNoiseLite) DoSingleDomainWarp3D(seed int32, amp float64, freq float64, x FNLfloat, y FNLfloat, z FNLfloat, xr *FNLfloat, yr *FNLfloat, zr *FNLfloat) {
+	switch n.mDomainWarpType {
+	case DomainWarpTypeOpenSimplex2:
+		SingleDomainWarpOpenSimplex2Gradient3D(seed, amp*32.69428253173828125, freq, x, y, z, xr, yr, zr, false)
+	case DomainWarpTypeOpenSimplex2Reduced:
+		SingleDomainWarpOpenSimplex2Gradient3D(seed, amp*7.71604938271605, freq, x, y, z, xr, yr, zr, true)
+	case DomainWarpTypeBasicGrid:
+		SingleDomainWarpBasicGrid3D(seed, amp, freq, x, y, z, xr, yr, zr)
+	}
+}
+
+func SingleDomainWarpSimplexGradient2D(seed int32, warpAmp float64, frequency float64, x FNLfloat, y FNLfloat, xr *FNLfloat, yr *FNLfloat, outGradOnly bool) {
+	SQRT3 := 1.7320508075688772935274463415059
+	G2 := (3 - SQRT3) / 6
+
+	x *= FNLfloat(frequency)
+	y *= FNLfloat(frequency)
+
+	/*
+	 * --- Skew moved to TransformNoiseCoordinate method ---
+	 * const FNfloat F2 = 0.5f * (SQRT3 - 1);
+	 * FNfloat s = (x + y) * F2;
+	 * x += s; y += s;
+	 */
+
+	i := int32(math.Floor(float64(x)))
+	j := int32(math.Floor(float64(y)))
+	xi := float64(x) - float64(i)
+	yi := float64(y) - float64(j)
+
+	t := (xi + yi) * G2
+	x0 := xi - t
+	y0 := yi - t
+
+	i *= PrimeX
+	j *= PrimeY
+
+	var vx, vy float64
+	vx = 0
+	vy = 0
+
+	a := 0.5 - x0*x0 - y0*y0
+	if a > 0 {
+		aaaa := (a * a) * (a * a)
+		var xo, yo float64
+		if outGradOnly {
+			GradCoordOut2D(seed, i, j, &xo, &yo)
+		} else {
+			GradCoordDual2D(seed, i, j, x0, y0, &xo, &yo)
+		}
+		vx += aaaa * xo
+		vy += aaaa * yo
+	}
+
+	c := (2.0*(1.0-2.0*G2)*(1.0/G2-2.0))*t + ((-2.0 * (1.0 - 2.0*G2) * (1.0 - 2.0*G2)) + a)
+	if c > 0 {
+		x2 := x0 + (2.0*G2 - 1.0)
+		y2 := y0 + (2.0*G2 - 1.0)
+		cccc := (c * c) * (c * c)
+		var xo, yo float64
+		if outGradOnly {
+			GradCoordOut2D(seed, i+PrimeX, j+PrimeY, &xo, &yo)
+
+		} else {
+			GradCoordDual2D(seed, i+PrimeX, j+PrimeY, x2, y2, &xo, &yo)
+		}
+		vx += cccc * xo
+		vy += cccc * yo
+	}
+
+	if y0 > x0 {
+		x1 := x0 + G2
+		y1 := y0 + (G2 - 1.0)
+		b := 0.5 - x1*x1 - y1*y1
+		if b > 0 {
+			bbbb := (b * b) * (b * b)
+			var xo, yo float64
+			if outGradOnly {
+				GradCoordOut2D(seed, i, j+PrimeY, &xo, &yo)
+			} else {
+				GradCoordDual2D(seed, i, j+PrimeY, x1, y1, &xo, &yo)
+			}
+			vx += bbbb * xo
+			vy += bbbb * yo
+		}
+	} else {
+		x1 := x0 + (G2 - 1.0)
+		y1 := y0 + G2
+		b := 0.5 - x1*x1 - y1*y1
+		if b > 0 {
+			bbbb := (b * b) * (b * b)
+			var xo, yo float64
+			if outGradOnly {
+				GradCoordOut2D(seed, i+PrimeX, j, &xo, &yo)
+
+			} else {
+				GradCoordDual2D(seed, i+PrimeX, j, x1, y1, &xo, &yo)
+			}
+			vx += bbbb * xo
+			vy += bbbb * yo
+		}
+	}
+
+	*xr += FNLfloat(vx * warpAmp)
+	*yr += FNLfloat(vy * warpAmp)
+}
+
+func SingleDomainWarpOpenSimplex2Gradient3D(seed int32, warpAmp float64, frequency float64, x FNLfloat, y FNLfloat, z FNLfloat, xr *FNLfloat, yr *FNLfloat, zr *FNLfloat, outGradOnly bool) {
+	x *= FNLfloat(frequency)
+	y *= FNLfloat(frequency)
+	z *= FNLfloat(frequency)
+
+	/*
+	 * --- Rotation moved to TransformDomainWarpCoordinate method ---
+	 * const FNfloat R3 = (FNfloat)(2.0 / 3.0);
+	 * FNfloat r = (x + y + z) * R3; // Rotation, not skew
+	 * x = r - x; y = r - y; z = r - z;
+	 */
+
+	i := int32(math.Round(float64(x)))
+	j := int32(math.Round(float64(y)))
+	k := int32(math.Round(float64(z)))
+	x0 := float64(x) - float64(i)
+	y0 := float64(y) - float64(j)
+	z0 := float64(z) - float64(k)
+
+	xNSign := int32(-x0-1.0) | 1
+	yNSign := int32(-y0-1.0) | 1
+	zNSign := int32(-z0-1.0) | 1
+
+	ax0 := float64(xNSign) * -x0
+	ay0 := float64(yNSign) * -y0
+	az0 := float64(zNSign) * -z0
+
+	i *= PrimeX
+	j *= PrimeY
+	k *= PrimeZ
+
+	var vx, vy, vz float64
+	vx = 0
+	vy = 0
+	vz = 0
+
+	a := (0.6 - x0*x0) - (y0*y0 + z0*z0)
+	for l := 0; ; l++ {
+		if a > 0 {
+			aaaa := (a * a) * (a * a)
+			var xo, yo, zo float64
+			if outGradOnly {
+				GradCoordOut3D(seed, i, j, k, &xo, &yo, &zo)
+			} else {
+				GradCoordDual3D(seed, i, j, k, x0, y0, z0, &xo, &yo, &zo)
+			}
+			vx += aaaa * xo
+			vy += aaaa * yo
+			vz += aaaa * zo
+		}
+
+		b := a
+		i1 := i
+		j1 := j
+		k1 := k
+		x1 := x0
+		y1 := y0
+		z1 := z0
+
+		if ax0 >= ay0 && ax0 >= az0 {
+			x1 += float64(xNSign)
+			b = b + ax0 + ax0
+			i1 -= xNSign * PrimeX
+		} else if ay0 > ax0 && ay0 >= az0 {
+			y1 += float64(yNSign)
+			b = b + ay0 + ay0
+			j1 -= yNSign * PrimeY
+		} else {
+			z1 += float64(zNSign)
+			b = b + az0 + az0
+			k1 -= zNSign * PrimeZ
+		}
+
+		if b > 1 {
+			b -= 1
+			bbbb := (b * b) * (b * b)
+			var xo, yo, zo float64
+			if outGradOnly {
+				GradCoordOut3D(seed, i1, j1, k1, &xo, &yo, &zo)
+			} else {
+				GradCoordDual3D(seed, i1, j1, k1, x1, y1, z1, &xo, &yo, &zo)
+			}
+			vx += bbbb * xo
+			vy += bbbb * yo
+			vz += bbbb * zo
+		}
+
+		if l == 1 {
+			break
+		}
+
+		ax0 = 0.5 - ax0
+		ay0 = 0.5 - ay0
+		az0 = 0.5 - az0
+
+		x0 = float64(xNSign) * ax0
+		y0 = float64(yNSign) * ay0
+		z0 = float64(zNSign) * az0
+
+		a += (0.75 - ax0) - (ay0 + az0)
+
+		i += (xNSign >> 1) & PrimeX
+		j += (yNSign >> 1) & PrimeY
+		k += (zNSign >> 1) & PrimeZ
+
+		xNSign = -xNSign
+		yNSign = -yNSign
+		zNSign = -zNSign
+
+		seed += 1293373
+	}
+
+	*xr += FNLfloat(vx * warpAmp)
+	*yr += FNLfloat(vy * warpAmp)
+	*zr += FNLfloat(vz * warpAmp)
+}
+
+func SingleDomainWarpBasicGrid2D(seed int32, warpAmp float64, frequency float64, x FNLfloat, y FNLfloat, xr *FNLfloat, yr *FNLfloat) {
+	xf := x * FNLfloat(frequency)
+	yf := y * FNLfloat(frequency)
+
+	x0 := int32(math.Floor(float64(xf)))
+	y0 := int32(math.Floor(float64(yf)))
+
+	xs := InterpHermite(float64(xf) - float64(x0))
+	ys := InterpHermite(float64(yf) - float64(y0))
+
+	x0 *= PrimeX
+	y0 *= PrimeY
+	x1 := x0 + PrimeX
+	y1 := y0 + PrimeY
+
+	hash0 := Hash2D(seed, x0, y0) & (255 << 1)
+	hash1 := Hash2D(seed, x1, y0) & (255 << 1)
+
+	lx0x := Lerp(RandVecs2D[hash0], RandVecs2D[hash1], xs)
+	ly0x := Lerp(RandVecs2D[hash0|1], RandVecs2D[hash1|1], xs)
+
+	hash0 = Hash2D(seed, x0, y1) & (255 << 1)
+	hash1 = Hash2D(seed, x1, y1) & (255 << 1)
+
+	lx1x := Lerp(RandVecs2D[hash0], RandVecs2D[hash1], xs)
+	ly1x := Lerp(RandVecs2D[hash0|1], RandVecs2D[hash1|1], xs)
+
+	*xr += FNLfloat(Lerp(lx0x, lx1x, ys) * warpAmp)
+	*yr += FNLfloat(Lerp(ly0x, ly1x, ys) * warpAmp)
+}
+
+func SingleDomainWarpBasicGrid3D(seed int32, warpAmp float64, frequency float64, x FNLfloat, y FNLfloat, z FNLfloat, xr *FNLfloat, yr *FNLfloat, zr *FNLfloat) {
+	xf := float64(x) * frequency
+	yf := float64(y) * frequency
+	zf := float64(z) * frequency
+
+	x0 := int32(math.Floor(xf))
+	y0 := int32(math.Floor(yf))
+	z0 := int32(math.Floor(zf))
+
+	xs := InterpHermite(float64(xf) - float64(x0))
+	ys := InterpHermite(float64(yf) - float64(y0))
+	zs := InterpHermite(float64(zf) - float64(z0))
+
+	x0 *= PrimeX
+	y0 *= PrimeY
+	z0 *= PrimeZ
+	x1 := x0 + PrimeX
+	y1 := y0 + PrimeY
+	z1 := z0 + PrimeZ
+
+	hash0 := Hash3D(seed, x0, y0, z0) & (255 << 2)
+	hash1 := Hash3D(seed, x1, y0, z0) & (255 << 2)
+
+	lx0x := Lerp(RandVecs3D[hash0], RandVecs3D[hash1], xs)
+	ly0x := Lerp(RandVecs3D[hash0|1], RandVecs3D[hash1|1], xs)
+	lz0x := Lerp(RandVecs3D[hash0|2], RandVecs3D[hash1|2], xs)
+
+	hash0 = Hash3D(seed, x0, y1, z0) & (255 << 2)
+	hash1 = Hash3D(seed, x1, y1, z0) & (255 << 2)
+
+	lx1x := Lerp(RandVecs3D[hash0], RandVecs3D[hash1], xs)
+	ly1x := Lerp(RandVecs3D[hash0|1], RandVecs3D[hash1|1], xs)
+	lz1x := Lerp(RandVecs3D[hash0|2], RandVecs3D[hash1|2], xs)
+
+	lx0y := Lerp(lx0x, lx1x, ys)
+	ly0y := Lerp(ly0x, ly1x, ys)
+	lz0y := Lerp(lz0x, lz1x, ys)
+
+	hash0 = Hash3D(seed, x0, y0, z1) & (255 << 2)
+	hash1 = Hash3D(seed, x1, y0, z1) & (255 << 2)
+
+	lx0x = Lerp(RandVecs3D[hash0], RandVecs3D[hash1], xs)
+	ly0x = Lerp(RandVecs3D[hash0|1], RandVecs3D[hash1|1], xs)
+	lz0x = Lerp(RandVecs3D[hash0|2], RandVecs3D[hash1|2], xs)
+
+	hash0 = Hash3D(seed, x0, y1, z1) & (255 << 2)
+	hash1 = Hash3D(seed, x1, y1, z1) & (255 << 2)
+
+	lx1x = Lerp(RandVecs3D[hash0], RandVecs3D[hash1], xs)
+	ly1x = Lerp(RandVecs3D[hash0|1], RandVecs3D[hash1|1], xs)
+	lz1x = Lerp(RandVecs3D[hash0|2], RandVecs3D[hash1|2], xs)
+
+	*xr += FNLfloat(Lerp(lx0y, Lerp(lx0x, lx1x, ys), zs) * warpAmp)
+	*yr += FNLfloat(Lerp(ly0y, Lerp(ly0x, ly1x, ys), zs) * warpAmp)
+	*zr += FNLfloat(Lerp(lz0y, Lerp(lz0x, lz1x, ys), zs) * warpAmp)
+}
+
+func (n *FastNoiseLite) TransformDomainWarpCoordinate2D(x *FNLfloat, y *FNLfloat) {
+	SQRT3 := FNLfloat(1.7320508075688772935274463415059)
+	F2 := 0.5 * (SQRT3 - 1.0)
+
+	switch n.mDomainWarpType {
+	case DomainWarpTypeOpenSimplex2Reduced, DomainWarpTypeOpenSimplex2:
+		t := (*x + *y) * F2
+		*x += t
+		*y += t
+	}
+}
+
+func (n *FastNoiseLite) TransformDomainWarpCoordinate3D(x *FNLfloat, y *FNLfloat, z *FNLfloat) {
+	switch n.WarpTransformType3D {
+	case TransformType3DImproveXYPlanes:
+		xy := *x + *y
+		s2 := xy * -FNLfloat(0.211324865405187)
+		*z *= FNLfloat(0.577350269189626)
+		*x += s2 - *z
+		*y = *y + s2 - *z
+		*z += xy * FNLfloat(0.577350269189626)
+	case TransformType3DImproveXZPlanes:
+		xz := *x + *z
+		s2 := xz * -FNLfloat(0.211324865405187)
+		*y *= FNLfloat(0.577350269189626)
+		*x += s2 - *y
+		*z += s2 - *y
+		*y += xz * FNLfloat(0.577350269189626)
+	case TransformType3DDefaultOpenSimplex2:
+		R3 := FNLfloat(2.0 / 3.0)
+		r := (*x + *y + *z) * R3 // Rotation, not skew
+		*x = r - *x
+		*y = r - *y
+		*z = r - *z
+	}
+}
+
+func (n *FastNoiseLite) DomainWarpFractalProgressive2D(x *FNLfloat, y *FNLfloat) {
+	seed := n.Seed
+	amp := n.DomainWarpAmp * n.FractalBounding
+	freq := n.Frequency
+
+	for i := int32(0); i < n.mOctaves; i++ {
+		xs := *x
+		ys := *y
+		n.TransformDomainWarpCoordinate2D(&xs, &ys)
+
+		n.DoSingleDomainWarp2D(seed, amp, freq, xs, ys, x, y)
+
+		seed++
+		amp *= n.mGain
+		freq *= n.Lacunarity
+	}
+}
+
+func (n *FastNoiseLite) DomainWarpFractalProgressive3D(x *FNLfloat, y *FNLfloat, z *FNLfloat) {
+	seed := n.Seed
+	amp := n.DomainWarpAmp * n.FractalBounding
+	freq := n.Frequency
+
+	for i := int32(0); i < n.mOctaves; i++ {
+		xs := *x
+		ys := *y
+		zs := *z
+		n.TransformDomainWarpCoordinate3D(&xs, &ys, &zs)
+
+		n.DoSingleDomainWarp3D(seed, amp, freq, xs, ys, zs, x, y, z)
+
+		seed++
+		amp *= n.mGain
+		freq *= n.Lacunarity
+	}
+}
+
+func (n *FastNoiseLite) DomainWarpFractalIndependent2D(x *FNLfloat, y *FNLfloat) {
+	xs := *x
+	ys := *y
+	n.TransformDomainWarpCoordinate2D(&xs, &ys)
+
+	seed := n.Seed
+	amp := n.DomainWarpAmp * n.FractalBounding
+	freq := n.Frequency
+
+	for i := int32(0); i < n.mOctaves; i++ {
+		n.DoSingleDomainWarp2D(seed, amp, freq, xs, ys, x, y)
+
+		seed++
+		amp *= n.mGain
+		freq *= n.Lacunarity
+	}
+}
+
+func (n *FastNoiseLite) DomainWarpFractalIndependent3D(x *FNLfloat, y *FNLfloat, z *FNLfloat) {
+	xs := *x
+	ys := *y
+	zs := *z
+	n.TransformDomainWarpCoordinate3D(&xs, &ys, &zs)
+
+	seed := n.Seed
+	amp := n.DomainWarpAmp * n.FractalBounding
+	freq := n.Frequency
+
+	for i := int32(0); i < n.mOctaves; i++ {
+		n.DoSingleDomainWarp3D(seed, amp, freq, xs, ys, zs, x, y, z)
+
+		seed++
+		amp *= n.mGain
+		freq *= n.Lacunarity
+	}
 }

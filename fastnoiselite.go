@@ -369,18 +369,18 @@ func Hash3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32) int32 {
 }
 
 func ValCoord2D(seed int32, xPrimed int32, yPrimed int32) float64 {
-	hash := int32(Hash2D(seed, xPrimed, yPrimed))
+	hash := Hash2D(seed, xPrimed, yPrimed)
 
 	hash *= hash
-	hash = hash ^ int32(hash<<19)
+	hash = hash ^ hash<<19
 	return float64(hash) * (1.0 / 2147483648.0)
 }
 
 func ValCoord3D(seed int32, xPrimed int32, yPrimed int32, zPrimed int32) float64 {
-	hash := int32(Hash3D(seed, xPrimed, yPrimed, zPrimed))
+	hash := Hash3D(seed, xPrimed, yPrimed, zPrimed)
 
 	hash *= hash
-	hash = hash ^ int32(hash<<19)
+	hash = hash ^ hash<<19
 	return float64(hash) * (1.0 / 2147483648.0)
 }
 
@@ -1466,7 +1466,7 @@ func (n *FastNoiseLite) SingleValueCubic3D(seed int32, x FNLfloat, y FNLfloat, z
 			CubicLerp(ValCoord3D(seed, x0, y2, z3), ValCoord3D(seed, x1, y2, z3), ValCoord3D(seed, x2, y2, z3), ValCoord3D(seed, x3, y2, z3), xs),
 			CubicLerp(ValCoord3D(seed, x0, y3, z3), ValCoord3D(seed, x1, y3, z3), ValCoord3D(seed, x2, y3, z3), ValCoord3D(seed, x3, y3, z3), xs),
 			ys),
-		zs) * (1.0 / (1.5 * 1.5 * 1.5))
+		zs) * (1.0 / 1.5 * 1.5 * 1.5)
 }
 
 func (n *FastNoiseLite) SingleValue2D(seed int32, x FNLfloat, y FNLfloat) float64 {

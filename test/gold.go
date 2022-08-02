@@ -85,9 +85,26 @@ int Hash2D(int seed, int xPrimed, int yPrimed)
     return hash;
 }
 
+
+int Hash3D(int seed, int xPrimed, int yPrimed, int zPrimed)
+{
+    int hash = seed ^ xPrimed ^ yPrimed ^ zPrimed;
+
+    hash *= 0x27d4eb2d;
+    return hash;
+}
+
 float ValCoord2D(int seed, int xPrimed, int yPrimed)
 {
     int hash = Hash2D(seed, xPrimed, yPrimed);
+    hash *= hash;
+    hash ^= hash << 19;
+    return hash * (1 / 2147483648.0f);
+}
+
+float ValCoord3D(int seed, int xPrimed, int yPrimed, int zPrimed)
+{
+    int hash = _fnlHash3D(seed, xPrimed, yPrimed, zPrimed);
     hash *= hash;
     hash ^= hash << 19;
     return hash * (1 / 2147483648.0f);
@@ -107,6 +124,10 @@ func GoldLerp(a, b, c, d, t float32) float32 {
 
 func GoldValCoord2D(seed, xPrimed, yPrimed int) float32 {
 	return float32(C.ValCoord2D(C.int(seed), C.int(xPrimed), C.int(yPrimed)))
+}
+
+func GoldValCoord3D(seed, xPrimed, yPrimed, zPrimed int) float32 {
+	return float32(C.ValCoord3D(C.int(seed), C.int(xPrimed), C.int(yPrimed), C.int(zPrimed)))
 }
 
 func GetGold() string {

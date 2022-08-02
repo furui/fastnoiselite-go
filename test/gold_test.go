@@ -49,6 +49,15 @@ func TestValCoord2D(t *testing.T) {
 	}
 }
 
+func TestValCoord3D(t *testing.T) {
+	goldValue := GoldValCoord3D(1337, 1, 1, 1)
+	testValue := float32(fastnoiselite.ValCoord3D(1337, 1, 1, 1))
+	diff := goldValue - testValue
+	if diff > (errorAllowed) || diff < (0-errorAllowed) {
+		t.Errorf("for ValCoord2D, expected: %f, actual: %f", goldValue, testValue)
+	}
+}
+
 func TestNoise(t *testing.T) {
 	out := GetGold()
 	if out == "" {
